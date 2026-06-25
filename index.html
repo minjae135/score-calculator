@@ -1,156 +1,22 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko" data-theme="dark">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>성적 커트라인 시뮬레이터 | Target Grade Calculator</title>
-    <meta name="description" content="지필평가와 수행평가 점수, 반영 비율을 입력하고 목표 등급/점수를 달성하기 위해 필요한 점수를 역산해주는 편리하고 아름다운 시뮬레이터입니다.">
+    <meta name="description" content="지필평가와 수행평가 점수, 반영 비율을 입력하고 목표 등급/점수를 달성하기 위해 필요한 점수를 역산해주는 편리하고 아름다운 시뮬레이터입니다." />
     <!-- Open Graph for SEO & Link Previews -->
-    <meta property="og:title" content="성적 커트라인 시뮬레이터">
-    <meta property="og:description" content="목표 점수를 달성하기 위해 필요한 수행/지필평가 점수를 역산해 보세요.">
-    <meta property="og:type" content="website">
-    
+    <meta property="og:title" content="성적 커트라인 시뮬레이터" />
+    <meta property="og:description" content="목표 점수를 달성하기 위해 필요한 수행/지필평가 점수를 역산해 보세요." />
+    <meta property="og:type" content="website" />
     <!-- Google Fonts: Outfit for English & Numbers, Noto Sans KR for Korean -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- noinspection JSUnresolvedLibraryURL -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-    
-    <!-- Lucide Icons (Local) -->
-    <script src="libs/lucide.min.js"></script>
-    
-    <!-- Stylesheet -->
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div class="background-decor">
-        <div class="blob blob-1"></div>
-        <div class="blob blob-2"></div>
-        <div class="blob blob-3"></div>
-    </div>
-
-    <header class="app-header">
-        <div class="logo">
-            <i data-lucide="calculator"></i>
-            <h1>Target <span>Score</span></h1>
-        </div>
-        <div class="header-actions">
-            <button id="theme-toggle" class="icon-btn" aria-label="테마 전환" title="화면 테마 변경">
-                <i data-lucide="sun" class="sun-icon"></i>
-                <i data-lucide="moon" class="moon-icon"></i>
-            </button>
-        </div>
-    </header>
-
-    <main class="app-container">
-        <!-- Left Column: Inputs -->
-        <section class="card input-section">
-            <div class="card-header">
-                <div class="card-title">
-                    <i data-lucide="list-todo"></i>
-                    <h2>평가 항목 및 반영 비율</h2>
-                </div>
-                <button id="add-item-btn" class="btn btn-secondary">
-                    <i data-lucide="plus"></i> 항목 추가
-                </button>
-            </div>
-            
-            <p class="section-desc">
-                각 평가 항목의 반영 비율(%)과 만점 기준을 적고, 획득한 점수를 입력하세요. <br>
-                <strong>목표 점수를 구하려는 항목 하나만 빈칸(또는 비워둠)으로 남겨두세요.</strong>
-            </p>
-
-            <form id="calculator-form">
-                <div id="evaluation-items-list" class="items-list">
-                    <!-- Dynamic items will be inserted here by JS -->
-                </div>
-                
-                <div class="weight-status-container">
-                    <div class="weight-status-bar-bg">
-                        <div id="weight-progress" class="weight-status-bar-fill"></div>
-                    </div>
-                    <div class="weight-status-text">
-                        <span>반영 비율 합계: <strong id="total-weight-display">0</strong>%</span>
-                        <span id="weight-warning-msg" class="warning-text">반영 비율의 합이 100%여야 정확합니다.</span>
-                    </div>
-                </div>
-            </form>
-        </section>
-
-        <!-- Right Column: Results & Simulation -->
-        <section class="card result-section">
-            <div class="card-header">
-                <div class="card-title">
-                    <i data-lucide="trending-up"></i>
-                    <h2>목표 시뮬레이션</h2>
-                </div>
-            </div>
-
-            <!-- Target Score Input Card -->
-            <div class="target-card">
-                <div class="target-input-row">
-                    <label for="target-score">목표 최종 점수</label>
-                    <div class="target-input-wrapper">
-                        <input type="number" id="target-score" min="0" max="100" step="0.1" value="90">
-                        <span class="unit">점</span>
-                    </div>
-                </div>
-                
-                <!-- Quick Preset Buttons -->
-                <div class="presets-row">
-                    <button type="button" class="preset-btn" data-target="90">Grade A (90점)</button>
-                    <button type="button" class="preset-btn" data-target="80">Grade B (80점)</button>
-                    <button type="button" class="preset-btn" data-target="70">Grade C (70점)</button>
-                    <button type="button" class="preset-btn" data-target="60">Grade D (60점)</button>
-                </div>
-            </div>
-
-            <!-- Main Result Output -->
-            <div id="result-output-card" class="result-card state-neutral">
-                <div class="result-status-icon">
-                    <i data-lucide="help-circle" id="status-icon-element"></i>
-                </div>
-                <div class="result-details">
-                    <h3 id="result-title">항목을 입력해 주세요</h3>
-                    <p id="result-message">정확히 1개의 항목을 비워두시면, 목표 점수를 얻기 위해 필요한 점수를 실시간으로 계산해 드립니다.</p>
-                </div>
-            </div>
-
-            <!-- Visual Progress Visualization -->
-            <div class="visualizer-container">
-                <h3>점수 구성 및 확보 현황</h3>
-                
-                <!-- Horizontal Stacked Bar -->
-                <div class="stacked-bar">
-                    <div id="bar-secured" class="bar-segment bar-secured" style="width: 0;" data-tooltip="확보한 점수"></div>
-                    <div id="bar-required" class="bar-segment bar-required" style="width: 0;" data-tooltip="필요한 점수"></div>
-                    <div id="bar-remaining" class="bar-segment bar-remaining" style="width: 100%;" data-tooltip="나머지"></div>
-                </div>
-                
-                <div class="legend-row">
-                    <div class="legend-item">
-                        <span class="legend-color secured"></span>
-                        <span class="legend-label">이미 확보한 점수: <strong id="secured-points-display">0.0</strong>점</span>
-                    </div>
-                    <div class="legend-item">
-                        <span class="legend-color required"></span>
-                        <span class="legend-label">달성에 필요한 점수 기여도: <strong id="required-contrib-display">0.0</strong>점</span>
-                    </div>
-                    <div class="legend-item" id="max-achievable-container">
-                        <span class="legend-color max-achievable"></span>
-                        <span class="legend-label">최대 달성 가능 점수: <strong id="max-possible-display">0.0</strong>점</span>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <footer class="app-footer">
-        <p>&copy; 2026 성적 커트라인 시뮬레이터. GitHub Pages 호스팅 지원.</p>
-        <p>수행평가와 시험 점수를 자유롭게 입력하고 시뮬레이션하세요.</p>
-    </footer>
-
-    <!-- App Logic -->
-    <script src="app.js"></script>
-</body>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>
