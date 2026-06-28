@@ -21,9 +21,9 @@ import './App.css';
 // Default evaluation items matching the original app
 const defaultItems: EvaluationItem[] = [
   { id: '1', name: '중간고사', weight: 30, max: 100, score: 85 },
-  { id: '2', name: '기말고사', weight: 35, max: 100, score: null },
+  { id: '2', name: '기말고사', weight: 30, max: 100, score: null },
   { id: '3', name: '수행평가 (과제)', weight: 20, max: 100, score: 95 },
-  { id: '4', name: '수행평가 (발표)', weight: 15, max: 100, score: 90 },
+  { id: '4', name: '수행평가 (발표)', weight: 20, max: 100, score: 90 },
 ];
 
 // Preset target score options
