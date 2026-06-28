@@ -189,6 +189,13 @@
   gap: 0.4rem;
 }
 
+.subject-file-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.6rem;
+}
+
 .subject-new-btn,
 .subject-save-btn {
   min-height: 38px;
@@ -210,6 +217,49 @@
 .subject-delete-btn:disabled:hover {
   color: var(--text-muted) !important;
   background-color: var(--bg-primary);
+}
+
+.subject-import-choice {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+  padding: 0.65rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--bg-primary);
+}
+
+.subject-import-choice span,
+.subject-import-notice {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.subject-import-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.subject-import-notice {
+  margin-top: 0.5rem;
+  color: var(--success);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .item-presets {
@@ -407,6 +457,20 @@
   .subject-new-btn,
   .subject-save-btn {
     justify-content: center;
+  }
+
+  .subject-file-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .subject-file-actions .btn {
+    justify-content: center;
+  }
+
+  .subject-import-choice {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .item-presets-row {

@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
+import type { ChangeEvent } from 'react';
 import {
   Calculator,
   Sun,
@@ -7,6 +8,8 @@ import {
   ClipboardList,
   BookOpen,
   Save,
+  Download,
+  Upload,
   Plus,
   Trash2,
   TrendingUp,
@@ -39,7 +42,15 @@ interface SavedSubject {
   activeItemPresetId: ItemPresetId;
 }
 
+interface SavedSubjectsFile {
+  app: 'score-calculator';
+  version: 1;
+  exportedAt: string;
+  subjects: SavedSubject[];
+}
+
 const savedSubjectsStorageKey = 'score-calculator:saved-subjects';
+const savedSubjectsFileName = 'score-calculator-subjects.json';
 
 const itemPresets: {
   id: ItemPresetId;
@@ -116,12 +127,103 @@ function parseNumber(value: string, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isItemPresetId(value: unknown): value is ItemPresetId {
+  return value === 'default' || value === 'single-exam' || value === 'arts';
+}
+
+function normalizeSavedSubject(value: unknown): SavedSubject | null {
+  if (!isRecord(value)) return null;
+
+  const rawItems = Array.isArray(value.items) ? value.items : [];
+  const items = rawItems
+    .map((item): EvaluationItem | null => {
+      if (!isRecord(item)) return null;
+      const score = item.score === null ? null : Number(item.score);
+      return {
+        id: String(item.id ?? Date.now()),
+        name: String(item.name ?? '평가 항목'),
+        weight: Number(item.weight ?? 0),
+        max: Number(item.max ?? 100),
+        score: score !== null && Number.isFinite(score) ? score : null,
+      };
+    })
+    .filter((item): item is EvaluationItem => item !== null);
+
+  if (items.length === 0) return null;
+
+  return {
+    id: String(value.id ?? Date.now()),
+    name: String(value.name ?? '가져온 과목').trim() || '가져온 과목',
+    items,
+    targetScore: Number(value.targetScore ?? 90),
+    activeItemPresetId: isItemPresetId(value.activeItemPresetId)
+      ? value.activeItemPresetId
+      : 'default',
+  };
+}
+
+function parseSavedSubjectsPayload(payload: unknown): SavedSubject[] {
+  const rawSubjects =
+    isRecord(payload) && Array.isArray(payload.subjects)
+      ? payload.subjects
+      : Array.isArray(payload)
+        ? payload
+        : [];
+
+  return rawSubjects
+    .map(normalizeSavedSubject)
+    .filter((subject): subject is SavedSubject => subject !== null);
+}
+
+function getUniqueSubjectName(name: string, existingNames: Set<string>): string {
+  if (!existingNames.has(name)) return name;
+
+  let index = 2;
+  let nextName = `${name} (가져오기)`;
+  while (existingNames.has(nextName)) {
+    nextName = `${name} (가져오기 ${index})`;
+    index += 1;
+  }
+
+  return nextName;
+}
+
+function mergeSavedSubjects(
+  currentSubjects: SavedSubject[],
+  importedSubjects: SavedSubject[],
+): SavedSubject[] {
+  const usedIds = new Set(currentSubjects.map((subject) => subject.id));
+  const usedNames = new Set(currentSubjects.map((subject) => subject.name));
+
+  const nextImportedSubjects = importedSubjects.map((subject) => {
+    const name = getUniqueSubjectName(subject.name, usedNames);
+    const id = usedIds.has(subject.id)
+      ? `${subject.id}-imported-${Date.now()}-${usedIds.size}`
+      : subject.id;
+
+    usedNames.add(name);
+    usedIds.add(id);
+
+    return {
+      ...subject,
+      id,
+      name,
+    };
+  });
+
+  return [...currentSubjects, ...nextImportedSubjects];
+}
+
 function loadSavedSubjects(): SavedSubject[] {
   try {
     const raw = localStorage.getItem(savedSubjectsStorageKey);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    return parseSavedSubjectsPayload(parsed);
   } catch {
     return [];
   }
@@ -155,6 +257,7 @@ function renderMessagePart(part: MessagePart, index: number) {
 
 function App() {
   const { theme, toggleTheme } = useTheme();
+  const importFileInputRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<EvaluationItem[]>(defaultItems);
   const [targetScore, setTargetScore] = useState<number>(90);
   const [activeItemPresetId, setActiveItemPresetId] =
@@ -163,6 +266,10 @@ function App() {
     useState<SavedSubject[]>(loadSavedSubjects);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
   const [subjectName, setSubjectName] = useState<string>('');
+  const [pendingImportedSubjects, setPendingImportedSubjects] = useState<
+    SavedSubject[] | null
+  >(null);
+  const [importNotice, setImportNotice] = useState<string>('');
 
   // Derived: total weight across all items
   const totalWeight = useMemo(
@@ -299,6 +406,78 @@ function App() {
   const startNewSubject = () => {
     setSelectedSubjectId('');
     setSubjectName('');
+  };
+
+  const applyImportedSubjects = (
+    importedSubjects: SavedSubject[],
+    mode: 'replace' | 'merge',
+  ) => {
+    const nextSubjects =
+      mode === 'replace'
+        ? mergeSavedSubjects([], importedSubjects)
+        : mergeSavedSubjects(savedSubjects, importedSubjects);
+
+    setSavedSubjects(nextSubjects);
+    setSelectedSubjectId('');
+    setSubjectName('');
+    setPendingImportedSubjects(null);
+    setImportNotice(
+      `${importedSubjects.length}개 과목을 ${mode === 'replace' ? '불러왔습니다' : '합쳤습니다'}.`,
+    );
+    persistSavedSubjects(nextSubjects);
+  };
+
+  const exportSubjectsToFile = () => {
+    if (savedSubjects.length === 0) {
+      alert('내보낼 저장 과목이 없습니다.');
+      return;
+    }
+
+    const payload: SavedSubjectsFile = {
+      app: 'score-calculator',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      subjects: savedSubjects,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = savedSubjectsFileName;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const openImportFileDialog = () => {
+    importFileInputRef.current?.click();
+  };
+
+  const handleImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const importedSubjects = parseSavedSubjectsPayload(JSON.parse(text));
+
+      if (importedSubjects.length === 0) {
+        alert('불러올 수 있는 과목 데이터가 없습니다.');
+        return;
+      }
+
+      setImportNotice('');
+      if (savedSubjects.length > 0) {
+        setPendingImportedSubjects(importedSubjects);
+        return;
+      }
+
+      applyImportedSubjects(importedSubjects, 'replace');
+    } catch {
+      alert('JSON 파일을 읽지 못했습니다. 내보낸 과목 파일인지 확인하세요.');
+    }
   };
 
   const loadSubject = (id: string) => {
@@ -460,6 +639,68 @@ function App() {
                   </button>
                 </div>
               </div>
+              <div className="subject-file-actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={exportSubjectsToFile}
+                >
+                  <Download /> 파일 저장
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={openImportFileDialog}
+                >
+                  <Upload /> 파일 불러오기
+                </button>
+                <input
+                  ref={importFileInputRef}
+                  type="file"
+                  accept="application/json,.json"
+                  className="visually-hidden"
+                  onChange={handleImportFile}
+                />
+              </div>
+              {pendingImportedSubjects && (
+                <div className="subject-import-choice">
+                  <span>
+                    {pendingImportedSubjects.length}개 과목을 어떻게
+                    불러올까요?
+                  </span>
+                  <div className="subject-import-buttons">
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() =>
+                        applyImportedSubjects(pendingImportedSubjects, 'replace')
+                      }
+                    >
+                      덮어쓰기
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() =>
+                        applyImportedSubjects(pendingImportedSubjects, 'merge')
+                      }
+                    >
+                      합치기
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-icon-only"
+                      title="불러오기 취소"
+                      onClick={() => setPendingImportedSubjects(null)}
+                    >
+                      취소
+                    </button>
+                  </div>
+                </div>
+              )}
+              {importNotice && (
+                <p className="subject-import-notice">{importNotice}</p>
+              )}
             </div>
 
             <div className="item-presets">
