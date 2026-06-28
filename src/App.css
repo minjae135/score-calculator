@@ -189,6 +189,7 @@
   gap: 0.4rem;
 }
 
+.subject-new-btn,
 .subject-save-btn {
   min-height: 38px;
   white-space: nowrap;
@@ -400,9 +401,10 @@
 
   .subject-actions {
     display: grid;
-    grid-template-columns: 1fr 38px;
+    grid-template-columns: 1fr 1fr 38px;
   }
 
+  .subject-new-btn,
   .subject-save-btn {
     justify-content: center;
   }

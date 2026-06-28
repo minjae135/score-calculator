@@ -263,25 +263,42 @@ function App() {
       return;
     }
 
-    const existing = selectedSubjectId
+    const selectedSubject = selectedSubjectId
       ? savedSubjects.find((subject) => subject.id === selectedSubjectId)
-      : savedSubjects.find((subject) => subject.name === trimmedName);
+      : undefined;
+    const duplicateNameSubject = savedSubjects.find(
+      (subject) =>
+        subject.name === trimmedName && subject.id !== selectedSubjectId,
+    );
+
+    if (!selectedSubject && duplicateNameSubject) {
+      alert(
+        '같은 이름의 과목이 이미 있습니다. 기존 과목을 수정하려면 해당 과목을 선택하고, 새 과목이면 다른 이름으로 저장하세요.',
+      );
+      return;
+    }
+
     const subjectToSave: SavedSubject = {
-      id: existing?.id ?? Date.now().toString(),
+      id: selectedSubject?.id ?? Date.now().toString(),
       name: trimmedName,
       items,
       targetScore,
       activeItemPresetId,
     };
-    const nextSubjects = existing
+    const nextSubjects = selectedSubject
       ? savedSubjects.map((subject) =>
-          subject.id === existing.id ? subjectToSave : subject,
+          subject.id === selectedSubject.id ? subjectToSave : subject,
         )
       : [...savedSubjects, subjectToSave];
 
     setSavedSubjects(nextSubjects);
     setSelectedSubjectId(subjectToSave.id);
     persistSavedSubjects(nextSubjects);
+  };
+
+  const startNewSubject = () => {
+    setSelectedSubjectId('');
+    setSubjectName('');
   };
 
   const loadSubject = (id: string) => {
@@ -418,6 +435,13 @@ function App() {
                   />
                 </label>
                 <div className="subject-actions">
+                  <button
+                    type="button"
+                    className="btn btn-secondary subject-new-btn"
+                    onClick={startNewSubject}
+                  >
+                    <Plus /> 과목 추가
+                  </button>
                   <button
                     type="button"
                     className="btn btn-secondary subject-save-btn"
