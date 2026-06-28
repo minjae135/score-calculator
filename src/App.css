@@ -121,6 +121,162 @@
   margin-bottom: 1.25rem;
 }
 
+.subject-manager {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.subject-manager-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 0.6rem;
+}
+
+.subject-manager-label svg {
+  width: 15px;
+  height: 15px;
+  color: var(--border-focus);
+}
+
+.subject-controls {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.9fr) minmax(160px, 1fr) auto;
+  gap: 0.6rem;
+  align-items: end;
+}
+
+.subject-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.subject-field span {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.subject-field input,
+.subject-field select {
+  width: 100%;
+  min-height: 38px;
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  font-size: 0.875rem;
+  font-weight: 600;
+  outline: none;
+}
+
+.subject-field input:focus,
+.subject-field select:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.subject-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.subject-save-btn {
+  min-height: 38px;
+  white-space: nowrap;
+}
+
+.subject-delete-btn {
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+}
+
+.subject-delete-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.subject-delete-btn:disabled:hover {
+  color: var(--text-muted) !important;
+  background-color: var(--bg-primary);
+}
+
+.item-presets {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.item-presets-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 0.6rem;
+}
+
+.item-presets-label svg {
+  width: 15px;
+  height: 15px;
+  color: var(--border-focus);
+}
+
+.item-presets-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.item-preset-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  min-height: 58px;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  cursor: pointer;
+  text-align: left;
+}
+
+.item-preset-btn:hover {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.item-preset-btn.active {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.item-preset-btn span {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.item-preset-btn small {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
 /* --- Buttons --- */
 .btn {
   display: inline-flex;
@@ -238,6 +394,23 @@
 }
 
 @media (max-width: 600px) {
+  .subject-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .subject-actions {
+    display: grid;
+    grid-template-columns: 1fr 38px;
+  }
+
+  .subject-save-btn {
+    justify-content: center;
+  }
+
+  .item-presets-row {
+    grid-template-columns: 1fr;
+  }
+
   .item-row {
     grid-template-columns: 1fr 1fr;
     gap: 0.75rem;

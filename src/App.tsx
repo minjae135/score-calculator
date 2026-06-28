@@ -4,6 +4,9 @@ import {
   Sun,
   Moon,
   ListTodo,
+  ClipboardList,
+  BookOpen,
+  Save,
   Plus,
   Trash2,
   TrendingUp,
@@ -13,26 +16,115 @@ import {
   AlertTriangle,
   Sparkles,
 } from 'lucide-react';
-import type { EvaluationItem, ResultIconName } from './types';
+import type { EvaluationItem, MessagePart, ResultIconName } from './types';
 import { calculate } from './calculator';
 import { useTheme } from './useTheme';
 import './App.css';
 
 // Default evaluation items matching the original app
 const defaultItems: EvaluationItem[] = [
-  { id: '1', name: '중간고사', weight: 30, max: 100, score: 85 },
+  { id: '1', name: '중간고사', weight: 30, max: 100, score: null },
   { id: '2', name: '기말고사', weight: 30, max: 100, score: null },
-  { id: '3', name: '수행평가 (과제)', weight: 20, max: 100, score: 95 },
-  { id: '4', name: '수행평가 (발표)', weight: 20, max: 100, score: 90 },
+  { id: '3', name: '수행평가 1', weight: 20, max: 100, score: null },
+  { id: '4', name: '수행평가 2', weight: 20, max: 100, score: null },
+];
+
+type ItemPresetId = 'default' | 'single-exam' | 'arts';
+
+interface SavedSubject {
+  id: string;
+  name: string;
+  items: EvaluationItem[];
+  targetScore: number;
+  activeItemPresetId: ItemPresetId;
+}
+
+const savedSubjectsStorageKey = 'score-calculator:saved-subjects';
+
+const itemPresets: {
+  id: ItemPresetId;
+  label: string;
+  description: string;
+  items: EvaluationItem[];
+}[] = [
+  {
+    id: 'default',
+    label: '기본',
+    description: '중간 30%, 기말 30%, 수행 20% + 20%',
+    items: defaultItems,
+  },
+  {
+    id: 'single-exam',
+    label: '고사 1회',
+    description: '기말 40%, 수행 30% + 30%',
+    items: [
+      { id: 'single-final', name: '기말고사', weight: 40, max: 100, score: null },
+      {
+        id: 'single-task-1',
+        name: '수행평가 1',
+        weight: 30,
+        max: 100,
+        score: null,
+      },
+      {
+        id: 'single-task-2',
+        name: '수행평가 2',
+        weight: 30,
+        max: 100,
+        score: null,
+      },
+    ],
+  },
+  {
+    id: 'arts',
+    label: '예체능',
+    description: '수행 50% + 50%',
+    items: [
+      {
+        id: 'arts-task-1',
+        name: '수행평가 1',
+        weight: 50,
+        max: 100,
+        score: null,
+      },
+      {
+        id: 'arts-task-2',
+        name: '수행평가 2',
+        weight: 50,
+        max: 100,
+        score: null,
+      },
+    ],
+  },
 ];
 
 // Preset target score options
-const presets = [
+const standardTargetPresets = [
   { label: 'Grade A (90점)', value: 90 },
   { label: 'Grade B (80점)', value: 80 },
   { label: 'Grade C (70점)', value: 70 },
   { label: 'Grade D (60점)', value: 60 },
 ];
+
+const artsTargetPresets = [
+  { label: 'Grade A (80점)', value: 80 },
+  { label: 'Grade B (60점)', value: 60 },
+];
+
+function loadSavedSubjects(): SavedSubject[] {
+  try {
+    const raw = localStorage.getItem(savedSubjectsStorageKey);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistSavedSubjects(subjects: SavedSubject[]) {
+  localStorage.setItem(savedSubjectsStorageKey, JSON.stringify(subjects));
+}
 
 // Map icon name strings to Lucide React components
 const iconMap: Record<ResultIconName, React.ComponentType<{ className?: string }>> = {
@@ -43,10 +135,29 @@ const iconMap: Record<ResultIconName, React.ComponentType<{ className?: string }
   sparkles: Sparkles,
 };
 
+function renderMessagePart(part: MessagePart, index: number) {
+  switch (part.type) {
+    case 'strong':
+      return <strong key={index}>{part.value}</strong>;
+    case 'break':
+      return <br key={index} />;
+    case 'text':
+      return <span key={index}>{part.value}</span>;
+    default:
+      return null;
+  }
+}
+
 function App() {
   const { theme, toggleTheme } = useTheme();
   const [items, setItems] = useState<EvaluationItem[]>(defaultItems);
   const [targetScore, setTargetScore] = useState<number>(90);
+  const [activeItemPresetId, setActiveItemPresetId] =
+    useState<ItemPresetId>('default');
+  const [savedSubjects, setSavedSubjects] =
+    useState<SavedSubject[]>(loadSavedSubjects);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
+  const [subjectName, setSubjectName] = useState<string>('');
 
   // Derived: total weight across all items
   const totalWeight = useMemo(
@@ -118,6 +229,71 @@ function App() {
     setItems((prev) => prev.filter((item) => item.id !== id));
   };
 
+  const applyItemPreset = (preset: (typeof itemPresets)[number]) => {
+    setActiveItemPresetId(preset.id);
+    setTargetScore(preset.id === 'arts' ? 80 : 90);
+    setSelectedSubjectId('');
+    setItems(
+      preset.items.map((item) => ({
+        ...item,
+        id: `${item.id}-${Date.now()}`,
+      })),
+    );
+  };
+
+  const saveSubject = () => {
+    const trimmedName = subjectName.trim();
+    if (!trimmedName) {
+      alert('저장할 과목명을 입력하세요.');
+      return;
+    }
+
+    const existing = selectedSubjectId
+      ? savedSubjects.find((subject) => subject.id === selectedSubjectId)
+      : savedSubjects.find((subject) => subject.name === trimmedName);
+    const subjectToSave: SavedSubject = {
+      id: existing?.id ?? Date.now().toString(),
+      name: trimmedName,
+      items,
+      targetScore,
+      activeItemPresetId,
+    };
+    const nextSubjects = existing
+      ? savedSubjects.map((subject) =>
+          subject.id === existing.id ? subjectToSave : subject,
+        )
+      : [...savedSubjects, subjectToSave];
+
+    setSavedSubjects(nextSubjects);
+    setSelectedSubjectId(subjectToSave.id);
+    persistSavedSubjects(nextSubjects);
+  };
+
+  const loadSubject = (id: string) => {
+    setSelectedSubjectId(id);
+    const subject = savedSubjects.find((item) => item.id === id);
+    if (!subject) {
+      setSubjectName('');
+      return;
+    }
+
+    setSubjectName(subject.name);
+    setItems(subject.items);
+    setTargetScore(subject.targetScore);
+    setActiveItemPresetId(subject.activeItemPresetId);
+  };
+
+  const deleteSubject = () => {
+    if (!selectedSubjectId) return;
+    const nextSubjects = savedSubjects.filter(
+      (subject) => subject.id !== selectedSubjectId,
+    );
+    setSavedSubjects(nextSubjects);
+    setSelectedSubjectId('');
+    setSubjectName('');
+    persistSavedSubjects(nextSubjects);
+  };
+
   // Weight status bar state
   const weightBarWidth = `${Math.min(totalWeight, 100)}%`;
   const weightExcess = totalWeight > 100;
@@ -136,6 +312,8 @@ function App() {
 
   // Resolve the result icon component
   const ResultIcon = iconMap[result.iconName];
+  const currentTargetPresets =
+    activeItemPresetId === 'arts' ? artsTargetPresets : standardTargetPresets;
 
   return (
     <>
@@ -195,6 +373,77 @@ function App() {
           </p>
 
           <form id="calculator-form" onSubmit={(e) => e.preventDefault()}>
+            <div className="subject-manager">
+              <div className="subject-manager-label">
+                <BookOpen />
+                <span>과목 저장</span>
+              </div>
+              <div className="subject-controls">
+                <label className="subject-field">
+                  <span>저장된 과목</span>
+                  <select
+                    value={selectedSubjectId}
+                    onChange={(e) => loadSubject(e.target.value)}
+                  >
+                    <option value="">과목 선택</option>
+                    {savedSubjects.map((subject) => (
+                      <option key={subject.id} value={subject.id}>
+                        {subject.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="subject-field">
+                  <span>과목명</span>
+                  <input
+                    type="text"
+                    value={subjectName}
+                    placeholder="예) 수학, 체육"
+                    onChange={(e) => setSubjectName(e.target.value)}
+                  />
+                </label>
+                <div className="subject-actions">
+                  <button
+                    type="button"
+                    className="btn btn-secondary subject-save-btn"
+                    onClick={saveSubject}
+                  >
+                    <Save /> 저장
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-icon-only btn-danger subject-delete-btn"
+                    title="저장된 과목 삭제"
+                    disabled={!selectedSubjectId}
+                    onClick={deleteSubject}
+                  >
+                    <Trash2 />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="item-presets">
+              <div className="item-presets-label">
+                <ClipboardList />
+                <span>항목 프리셋</span>
+              </div>
+              <div className="item-presets-row">
+                {itemPresets.map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    className={`item-preset-btn${activeItemPresetId === preset.id ? ' active' : ''}`}
+                    title={preset.description}
+                    onClick={() => applyItemPreset(preset)}
+                  >
+                    <span>{preset.label}</span>
+                    <small>{preset.description}</small>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div id="evaluation-items-list" className="items-list">
               {items.map((item) => {
                 const isTarget = emptyItemIds.includes(item.id);
@@ -221,7 +470,7 @@ function App() {
                       <input
                         type="number"
                         className="item-weight"
-                        value={item.weight}
+                        value={item.weight === 0 ? '' : item.weight}
                         min={0}
                         max={100}
                         placeholder="0"
@@ -330,7 +579,7 @@ function App() {
 
             {/* Quick preset buttons */}
             <div className="presets-row">
-              {presets.map((preset) => (
+              {currentTargetPresets.map((preset) => (
                 <button
                   key={preset.value}
                   type="button"
@@ -353,10 +602,9 @@ function App() {
             </div>
             <div className="result-details">
               <h3 id="result-title">{result.title}</h3>
-              <p
-                id="result-message"
-                dangerouslySetInnerHTML={{ __html: result.message }}
-              />
+              <p id="result-message">
+                {result.message.map(renderMessagePart)}
+              </p>
             </div>
           </div>
 

@@ -18,11 +18,16 @@ export type ResultIconName =
   | 'alert-triangle'
   | 'sparkles';
 
+export type MessagePart =
+  | { type: 'text'; value: string }
+  | { type: 'strong'; value: string }
+  | { type: 'break' };
+
 // Output of the grade calculation logic
 export interface CalculationResult {
   state: ResultState;
   title: string;
-  message: string;
+  message: MessagePart[];
   iconName: ResultIconName;
   securedScore: number;
   requiredContrib: number;

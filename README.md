@@ -1,32 +1,90 @@
-# React + TypeScript + Vite
+# Score Calculator
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+성적 목표 점수를 역산하는 React + TypeScript 웹앱입니다.
 
-Currently, two official plugins are available:
+평가 항목별 반영 비율, 만점 기준, 획득 점수를 입력하면 현재 확보한 점수와 목표 달성을 위해 필요한 점수를 계산합니다. 점수를 모르는 항목을 정확히 하나만 비워두면 해당 항목에서 몇 점 이상을 받아야 하는지 보여줍니다.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 주요 기능
 
-## React Compiler
+- 평가 항목 추가, 수정, 삭제
+- 평가 항목 프리셋 적용
+- 과목별 입력값 저장과 불러오기
+- 항목별 반영 비율과 만점 기준 설정
+- 현재 확보 점수와 최대 달성 가능 점수 표시
+- 목표 점수 달성 가능 여부 판정
+- 점수를 모르는 단일 항목의 필요 점수 역산
+- 라이트/다크 테마 전환
+- GitHub Pages 배포용 Vite 설정
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 계산 기준
 
-## Expanding the Oxlint configuration
+각 항목의 기여도는 다음 공식으로 계산합니다.
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```text
+(획득 점수 / 만점 기준) * 반영 비율
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+최종 점수는 모든 항목의 기여도를 합산한 값입니다. 목표 달성 여부는 현재 앱 기준상 최종 점수를 반올림한 값과 목표 점수를 반올림한 값을 비교합니다.
+
+점수를 모르는 항목이 하나일 때는 목표 점수로 반올림되기 위한 최소 기여도를 기준으로 필요한 점수를 계산합니다.
+
+## 평가 항목 프리셋
+
+앱에는 자주 쓰는 반영 비율 구성을 빠르게 적용할 수 있는 프리셋이 있습니다.
+
+- 기본: 중간고사 30%, 기말고사 30%, 수행평가 1 20%, 수행평가 2 20%
+- 고사 1회: 기말고사 40%, 수행평가 30% + 30%
+- 예체능: 수행평가 50% + 50%
+
+예체능 프리셋을 선택하면 목표 등급 버튼은 예체능 기준으로 바뀝니다.
+
+- Grade A: 80점 이상
+- Grade B: 60~79점
+- Grade C: 59점 이하이므로 별도 목표 버튼을 제공하지 않습니다.
+
+## 과목 저장
+
+과목명을 입력하고 저장하면 현재 평가 항목, 반영 비율, 입력 점수, 목표 점수, 프리셋 기준이 함께 저장됩니다. 저장된 과목은 드롭다운에서 다시 불러올 수 있습니다.
+
+저장 데이터는 브라우저의 `localStorage`에 보관됩니다. 같은 기기와 같은 브라우저에서는 앱을 껐다 켜도 유지되지만, 다른 브라우저나 다른 기기와 자동으로 동기화되지는 않습니다.
+
+## 실행 방법
+
+```bash
+npm install
+npm run dev
+```
+
+프로덕션 빌드는 다음 명령으로 확인합니다.
+
+```bash
+npm run build
+```
+
+린트는 다음 명령으로 실행합니다.
+
+```bash
+npm run lint
+```
+
+## 프로젝트 구조
+
+```text
+src/
+  App.tsx        화면 구성과 사용자 입력 처리
+  calculator.ts 계산 엔진
+  types.ts      공통 타입 정의
+  useTheme.ts   테마 상태 관리
+  App.css       앱 레이아웃 스타일
+  index.css     전역 스타일과 CSS 변수
+```
+
+## 배포
+
+`vite.config.ts`의 `base` 값은 GitHub Pages에서 `/score-calculator/` 경로로 배포하는 것을 기준으로 설정되어 있습니다.
+
+```ts
+base: '/score-calculator/'
+```
+
+다른 저장소 이름이나 커스텀 도메인으로 배포한다면 이 값을 배포 경로에 맞게 변경해야 합니다.

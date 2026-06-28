@@ -1,8 +1,20 @@
-import type { EvaluationItem, CalculationResult } from './types';
+import type { EvaluationItem, CalculationResult, MessagePart } from './types';
 
 // Round to 2 decimal places
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+function text(value: string): MessagePart {
+  return { type: 'text', value };
+}
+
+function strong(value: string | number): MessagePart {
+  return { type: 'strong', value: String(value) };
+}
+
+function br(): MessagePart {
+  return { type: 'break' };
 }
 
 /**
@@ -36,7 +48,7 @@ export function calculate(
   let maxPossibleScore: number;
   let state: CalculationResult['state'];
   let title: string;
-  let message: string;
+  let message: MessagePart[];
   let iconName: CalculationResult['iconName'];
   let requiredContrib: number;
   let barRequiredTooltip: string;
@@ -55,17 +67,35 @@ export function calculate(
     if (totalScoreRounded >= targetScoreRounded) {
       state = 'success';
       title = '목표 달성 완료!';
-      message = `모든 항목의 점수가 입력되었습니다. 최종 점수는 <strong>${round2(totalScore)}점</strong> (반올림: <strong>${totalScoreRounded}점</strong>)으로, 목표 점수(${targetScoreRounded}점)를 달성했습니다!`;
+      message = [
+        text('모든 항목의 점수가 입력되었습니다. 최종 점수는 '),
+        strong(`${round2(totalScore)}점`),
+        text(' (반올림: '),
+        strong(`${totalScoreRounded}점`),
+        text(`)으로, 목표 점수(${targetScoreRounded}점)를 달성했습니다!`),
+      ];
       iconName = 'check-circle-2';
     } else if (totalScoreRounded >= targetScoreRounded - 1) {
       state = 'warning';
       title = '아슬아슬하게 달성';
-      message = `최종 점수 <strong>${round2(totalScore)}점</strong> (반올림: <strong>${totalScoreRounded}점</strong>)으로, 목표 점수(${targetScoreRounded}점)에 근접하지만 도달하지 못했습니다.`;
+      message = [
+        text('최종 점수 '),
+        strong(`${round2(totalScore)}점`),
+        text(' (반올림: '),
+        strong(`${totalScoreRounded}점`),
+        text(`)으로, 목표 점수(${targetScoreRounded}점)에 근접하지만 도달하지 못했습니다.`),
+      ];
       iconName = 'alert-circle';
     } else {
       state = 'danger';
       title = '목표 미달';
-      message = `최종 점수 <strong>${round2(totalScore)}점</strong> (반올림: <strong>${totalScoreRounded}점</strong>)으로, 목표 점수(${targetScoreRounded}점)에 미치지 못합니다. (차이: ${targetScoreRounded - totalScoreRounded}점)`;
+      message = [
+        text('최종 점수 '),
+        strong(`${round2(totalScore)}점`),
+        text(' (반올림: '),
+        strong(`${totalScoreRounded}점`),
+        text(`)으로, 목표 점수(${targetScoreRounded}점)에 미치지 못합니다. (차이: ${targetScoreRounded - totalScoreRounded}점)`),
+      ];
       iconName = 'alert-triangle';
     }
 
@@ -92,7 +122,18 @@ export function calculate(
 
       state = 'success';
       title = '이미 목표 달성!';
-      message = `현재 확보한 점수만으로 <strong>${round2(securedScore)}점</strong> (반올림: <strong>${Math.round(securedScore)}점</strong>)이며, 이미 목표 점수(${targetScoreRounded}점)를 달성한 상태입니다. <br><strong>[${targetItem.name}]</strong> 항목에서 <strong>0점</strong>을 받아도 목표 달성이 가능합니다.`;
+      message = [
+        text('현재 확보한 점수만으로 '),
+        strong(`${round2(securedScore)}점`),
+        text(' (반올림: '),
+        strong(`${Math.round(securedScore)}점`),
+        text(`)이며, 이미 목표 점수(${targetScoreRounded}점)를 달성한 상태입니다. `),
+        br(),
+        strong(`[${targetItem.name}]`),
+        text(' 항목에서 '),
+        strong('0점'),
+        text('을 받아도 목표 달성이 가능합니다.'),
+      ];
       iconName = 'sparkles';
     } else if (neededContrib > targetWeight) {
       // B2: Impossible to reach target
@@ -108,7 +149,15 @@ export function calculate(
 
       state = 'danger';
       title = '목표 달성 불가능';
-      message = `아쉽게도 <strong>[${targetItem.name}]</strong> 항목에서 만점(기여도 ${targetWeight}점)을 획득해도 최종 점수가 최대 <strong>${round2(maxPossibleScore)}점</strong> (반올림: <strong>${maxPossibleScoreRounded}점</strong>)에 그쳐, 목표 점수(${targetScoreRounded}점)에 도달할 수 없습니다. (반올림 기준 부족한 점수 기여도: 최소 ${gap}점)`;
+      message = [
+        text('아쉽게도 '),
+        strong(`[${targetItem.name}]`),
+        text(` 항목에서 만점(기여도 ${targetWeight}점)을 획득해도 최종 점수가 최대 `),
+        strong(`${round2(maxPossibleScore)}점`),
+        text(' (반올림: '),
+        strong(`${maxPossibleScoreRounded}점`),
+        text(`)에 그쳐, 목표 점수(${targetScoreRounded}점)에 도달할 수 없습니다. (반올림 기준 부족한 점수 기여도: 최소 ${gap}점)`),
+      ];
       iconName = 'alert-triangle';
     } else {
       // B3: Achievable — calculate required score
@@ -129,12 +178,24 @@ export function calculate(
       if (ratio >= 0.9) {
         state = 'warning';
         title = '목표 달성 고난도';
-        message = `목표 점수 달성을 위해 <strong>[${targetItem.name}]</strong> 항목에서 만점에 가까운 <strong>${finalRequiredScore}점</strong> 이상을 받아야 합니다! (만점: ${targetMax}점 중 약 ${Math.round(ratio * 100)}% 득점 필요. 획득 시 최종 점수 ${round2(projectedScore)}점 → 반올림 ${targetScoreRounded}점)`;
+        message = [
+          text('목표 점수 달성을 위해 '),
+          strong(`[${targetItem.name}]`),
+          text(' 항목에서 만점에 가까운 '),
+          strong(`${finalRequiredScore}점`),
+          text(` 이상을 받아야 합니다! (만점: ${targetMax}점 중 약 ${Math.round(ratio * 100)}% 득점 필요. 획득 시 최종 점수 ${round2(projectedScore)}점 → 반올림 ${targetScoreRounded}점)`),
+        ];
         iconName = 'alert-circle';
       } else {
         state = 'success';
         title = '목표 달성 가능!';
-        message = `목표 점수 달성을 위해 <strong>[${targetItem.name}]</strong> 항목에서 <strong>${finalRequiredScore}점</strong> 이상을 획득하면 됩니다. (만점: ${targetMax}점. 획득 시 최종 점수 ${round2(projectedScore)}점 → 반올림 ${targetScoreRounded}점)`;
+        message = [
+          text('목표 점수 달성을 위해 '),
+          strong(`[${targetItem.name}]`),
+          text(' 항목에서 '),
+          strong(`${finalRequiredScore}점`),
+          text(` 이상을 획득하면 됩니다. (만점: ${targetMax}점. 획득 시 최종 점수 ${round2(projectedScore)}점 → 반올림 ${targetScoreRounded}점)`),
+        ];
         iconName = 'check-circle-2';
       }
     }
@@ -158,7 +219,13 @@ export function calculate(
 
     state = 'neutral';
     title = '입력 대기 중';
-    message = `현재 비어있는 항목이 <strong>${countEmpty}개</strong> 있습니다. 역산을 하려면 점수를 모르는 <strong>단 1개의 항목</strong>만 비워두세요.`;
+    message = [
+      text('현재 비어있는 항목이 '),
+      strong(`${countEmpty}개`),
+      text(' 있습니다. 역산을 하려면 점수를 모르는 '),
+      strong('단 1개의 항목'),
+      text('만 비워두세요.'),
+    ];
     iconName = 'help-circle';
     barRequiredTooltip = '필요한 성적 기여도: 0.00점';
   }
