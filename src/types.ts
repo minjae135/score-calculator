@@ -8,7 +8,12 @@ export interface EvaluationItem {
 }
 
 // Possible visual states for the result card
-export type ResultState = 'neutral' | 'success' | 'warning' | 'danger';
+export type ResultState =
+  | 'neutral'
+  | 'success'
+  | 'warning'
+  | 'danger'
+  | 'easter';
 
 // Icon identifiers used in the result card
 export type ResultIconName =

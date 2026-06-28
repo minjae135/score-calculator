@@ -17,6 +17,38 @@ function br(): MessagePart {
   return { type: 'break' };
 }
 
+function summarizeInvalidInputs(items: EvaluationItem[], targetScore: number): string[] {
+  const issues: string[] = [];
+
+  items.forEach((item) => {
+    if (item.weight < 0) {
+      issues.push(`[${item.name}] 반영 비율이 음수입니다 (${round2(item.weight)}%)`);
+    }
+
+    if (item.max <= 0) {
+      issues.push(`[${item.name}] 만점 기준이 0 이하입니다 (${round2(item.max)}점)`);
+    }
+
+    if (item.score !== null) {
+      if (item.score < 0) {
+        issues.push(`[${item.name}] 획득 점수가 음수입니다 (${round2(item.score)}점)`);
+      } else if (item.max > 0 && item.score > item.max) {
+        issues.push(
+          `[${item.name}] 획득 점수가 만점을 초과했습니다 (${round2(item.score)} / ${round2(item.max)})`,
+        );
+      }
+    }
+  });
+
+  if (targetScore < 0) {
+    issues.push(`목표 최종 점수가 음수입니다 (${round2(targetScore)}점)`);
+  } else if (targetScore > 100) {
+    issues.push(`목표 최종 점수가 100점을 초과했습니다 (${round2(targetScore)}점)`);
+  }
+
+  return issues;
+}
+
 /**
  * Core calculation engine.
  * Determines the required score for a single empty evaluation item
@@ -26,6 +58,37 @@ export function calculate(
   items: EvaluationItem[],
   targetScore: number,
 ): CalculationResult {
+  const invalidIssues = summarizeInvalidInputs(items, targetScore);
+  if (invalidIssues.length > 0) {
+    const previewIssues = invalidIssues.slice(0, 3);
+    const hiddenIssueCount = invalidIssues.length - previewIssues.length;
+
+    return {
+      state: 'easter',
+      title: '성적 계산기 비상 탈출 모드',
+      message: [
+        text('점수계가 현실을 거부했습니다. 아래 입력부터 정상 범위를 벗어났습니다.'),
+        br(),
+        strong(`- ${previewIssues.join(' / - ')}`),
+        ...(hiddenIssueCount > 0
+          ? [br(), text(`외 ${hiddenIssueCount}개 항목도 함께 폭주 중입니다.`)]
+          : []),
+        br(),
+        text('이스터에그를 발견했습니다. 값을 원래 범위로 돌리면 다시 진지하게 계산합니다.'),
+      ],
+      iconName: 'sparkles',
+      securedScore: 0,
+      requiredContrib: 0,
+      maxPossibleScore: 0,
+      barSecuredPct: 0,
+      barRequiredPct: 0,
+      barRemainingPct: 100,
+      barSecuredTooltip: '비정상 입력 감지: 일반 계산을 일시 중단했습니다.',
+      barRequiredTooltip: '이스터에그 활성화 상태입니다.',
+      barRemainingTooltip: '입력값을 정상 범위로 되돌리면 계산이 재개됩니다.',
+    };
+  }
+
   // Identify items with missing scores
   const emptyItems = items.filter(
     (item) => item.score === null || isNaN(item.score),

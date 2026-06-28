@@ -111,6 +111,11 @@ const artsTargetPresets = [
   { label: 'Grade B (60점)', value: 60 },
 ];
 
+function parseNumber(value: string, fallback: number): number {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 function loadSavedSubjects(): SavedSubject[] {
   try {
     const raw = localStorage.getItem(savedSubjectsStorageKey);
@@ -193,13 +198,23 @@ function App() {
           case 'name':
             return { ...item, name: value };
           case 'weight':
-            return { ...item, weight: parseFloat(value) || 0 };
-          case 'max':
-            return { ...item, max: parseFloat(value) || 100 };
+            return {
+              ...item,
+              weight: parseNumber(value, 0),
+            };
+          case 'max': {
+            return {
+              ...item,
+              max: parseNumber(value, 100),
+            };
+          }
           case 'score':
             return {
               ...item,
-              score: value.trim() === '' ? null : parseFloat(value),
+              score:
+                value.trim() === ''
+                  ? null
+                  : parseNumber(value, 0),
             };
           default:
             return item;
@@ -295,7 +310,7 @@ function App() {
   };
 
   // Weight status bar state
-  const weightBarWidth = `${Math.min(totalWeight, 100)}%`;
+  const weightBarWidth = `${Math.max(0, Math.min(totalWeight, 100))}%`;
   const weightExcess = totalWeight > 100;
   let weightWarningText: string;
   let weightWarningClass: string;
@@ -471,8 +486,6 @@ function App() {
                         type="number"
                         className="item-weight"
                         value={item.weight === 0 ? '' : item.weight}
-                        min={0}
-                        max={100}
                         placeholder="0"
                         onChange={(e) =>
                           updateItem(item.id, 'weight', e.target.value)
@@ -485,7 +498,6 @@ function App() {
                         type="number"
                         className="item-max"
                         value={item.max}
-                        min={1}
                         placeholder="100"
                         onChange={(e) =>
                           updateItem(item.id, 'max', e.target.value)
@@ -565,13 +577,9 @@ function App() {
                 <input
                   type="number"
                   id="target-score"
-                  min={0}
-                  max={100}
                   step={0.1}
                   value={targetScore}
-                  onChange={(e) =>
-                    setTargetScore(parseFloat(e.target.value) || 0)
-                  }
+                  onChange={(e) => setTargetScore(parseNumber(e.target.value, 0))}
                 />
                 <span className="unit">점</span>
               </div>

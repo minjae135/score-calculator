@@ -645,6 +645,23 @@
   color: var(--danger);
 }
 
+.result-card.state-easter {
+  background:
+    linear-gradient(rgba(11, 15, 25, 0.18), rgba(11, 15, 25, 0.18)),
+    var(--accent-gradient);
+  border-color: rgba(168, 85, 247, 0.45);
+  box-shadow: 0 0 18px rgba(99, 102, 241, 0.16);
+}
+.result-card.state-easter .result-status-icon {
+  background-color: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+.result-card.state-easter h3,
+.result-card.state-easter p,
+.result-card.state-easter strong {
+  color: #fff;
+}
+
 /* --- Visualizer: Stacked Bar --- */
 .visualizer-container h3 {
   font-size: 0.875rem;
